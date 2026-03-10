@@ -4,6 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>WarBoard Assistant</title>
+  <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;WarBoard Assistant&quot;,&quot;short_name&quot;:&quot;WarBoard&quot;,&quot;start_url&quot;:&quot;/&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230d0f0a&quot;,&quot;theme_color&quot;:&quot;%23c8a84b&quot;}"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="WarBoard"/>
+  <meta name="theme-color" content="#c8a84b"/>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -104,6 +109,21 @@
 </head>
 <body>
   <div id="root"></div>
+  <script>
+    if('serviceWorker' in navigator) {
+      const sw = `
+        const CACHE = 'warboard-v1';
+        self.addEventListener('install', e => {
+          e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])));
+        });
+        self.addEventListener('fetch', e => {
+          e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+        });
+      `;
+      const blob = new Blob([sw], {type: 'application/javascript'});
+      navigator.serviceWorker.register(URL.createObjectURL(blob));
+    }
+  </script>
   <script type="text/babel">
     const { useState } = React;
     const rollDie = () => Math.floor(Math.random() * 6) + 1;
