@@ -205,696 +205,680 @@ input[type=range] { width:100%; accent-color:var(--accent); height:6px; }
     } catch(e) {}
   }
 </script>
-<script type="text/babel">
-  const { useState, useEffect, useRef } = React;
+<script>
+  function playDrum() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var play = function(freq, start, dur, gain) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(freq, ctx.currentTime+start);
+        o.frequency.exponentialRampToValueAtTime(freq*0.3, ctx.currentTime+start+dur);
+        g.gain.setValueAtTime(gain||0.4, ctx.currentTime+start);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+start+dur);
+        o.start(ctx.currentTime+start); o.stop(ctx.currentTime+start+dur+0.01);
+      };
+      [0,0.18,0.36,0.5,0.68,0.82,1.0,1.14].forEach(function(t,i){ play(120,t,0.12,i%2===0?0.5:0.3); });
+    } catch(e){}
+  }
 
-function playDrum() {
-try {
-const ctx = new (window.AudioContext || window.webkitAudioContext)();
-const play = (freq, start, dur, type=‘sawtooth’, gain=0.4) => {
-const o = ctx.createOscillator(), g = ctx.createGain();
-o.connect(g); g.connect(ctx.destination);
-o.type = type; o.frequency.setValueAtTime(freq, ctx.currentTime+start);
-o.frequency.exponentialRampToValueAtTime(freq*0.3, ctx.currentTime+start+dur);
-g.gain.setValueAtTime(gain, ctx.currentTime+start);
-g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+start+dur);
-o.start(ctx.currentTime+start); o.stop(ctx.currentTime+start+dur+0.01);
-};
-[0,0.18,0.36,0.5,0.68,0.82,1.0,1.14].forEach((t,i)=>play(120,t,0.12,‘sawtooth’,i%2===0?0.5:0.3));
-} catch(e){}
-}
-
-const rollDie = () => Math.floor(Math.random()*6)+1;
+function rollDie() { return Math.floor(Math.random()*6)+1; }
 function doRound(ad,dd) {
-const a=Array.from({length:ad},rollDie).sort((x,y)=>y-x);
-const d=Array.from({length:dd},rollDie).sort((x,y)=>y-x);
-let aL=0,dL=0;
-for(let i=0;i<Math.min(ad,dd);i++){if(a[i]>d[i])dL++;else aL++;}
+var a=[],d=[],i,aL=0,dL=0;
+for(i=0;i<ad;i++) a.push(rollDie()); a.sort(function(x,y){return y-x;});
+for(i=0;i<dd;i++) d.push(rollDie()); d.sort(function(x,y){return y-x;});
+for(i=0;i<Math.min(ad,dd);i++){if(a[i]>d[i])dL++;else aL++;}
 return {ad:a,dd:d,aLoss:aL,dLoss:dL};
 }
 function simulate(atk,def,adMax,ddMax,n) {
-let w=0;
-for(let s=0;s<n;s++){
-let a=atk,d=def;
-while(a>1&&d>0){const r=doRound(Math.min(adMax,a-1),Math.min(ddMax,d));a-=r.aLoss;d-=r.dLoss;}
+var w=0,s,a,d,r;
+for(s=0;s<n;s++){
+a=atk; d=def;
+while(a>1&&d>0){r=doRound(Math.min(adMax,a-1),Math.min(ddMax,d));a-=r.aLoss;d-=r.dLoss;}
 if(d===0)w++;
 }
 return Math.round((w/n)*100);
 }
 
-// ── MAP DEFINITIONS ──────────────────────────────────────────────────────
-const MAPS = {
+var MAPS = {
 world: {
-label: “🌍 Wereldkaart”,
+label: “Wereldkaart”,
 continents: [
-{id:“na”, name:“Noord-Amerika”, bonus:5, cx:180, cy:160,
-path:“M 80,80 L 160,60 L 220,80 L 250,130 L 240,185 L 200,210 L 155,215 L 110,195 L 80,155 Z”},
-{id:“sa”, name:“Zuid-Amerika”, bonus:2, cx:195, cy:310,
-path:“M 145,240 L 210,230 L 240,265 L 235,340 L 200,375 L 160,360 L 140,310 Z”},
-{id:“eu”, name:“Europa”, bonus:5, cx:370, cy:120,
-path:“M 300,75 L 380,65 L 420,90 L 415,145 L 375,160 L 325,150 L 300,115 Z”},
-{id:“af”, name:“Afrika”, bonus:3, cx:370, cy:265,
-path:“M 305,175 L 390,165 L 425,200 L 428,295 L 390,340 L 345,335 L 308,290 L 300,215 Z”},
-{id:“as”, name:“Azië”, bonus:7, cx:530, cy:150,
-path:“M 430,60 L 600,50 L 660,95 L 665,185 L 620,230 L 545,245 L 460,225 L 425,165 L 432,90 Z”},
-{id:“oc”, name:“Oceanië”, bonus:2, cx:590, cy:315,
-path:“M 545,275 L 610,265 L 640,295 L 628,345 L 585,355 L 552,330 Z”},
+{id:“na”, name:“Noord-Amerika”, bonus:5, cx:180, cy:160, path:“M 80,80 L 160,60 L 220,80 L 250,130 L 240,185 L 200,210 L 155,215 L 110,195 L 80,155 Z”},
+{id:“sa”, name:“Zuid-Amerika”,  bonus:2, cx:195, cy:310, path:“M 145,240 L 210,230 L 240,265 L 235,340 L 200,375 L 160,360 L 140,310 Z”},
+{id:“eu”, name:“Europa”,        bonus:5, cx:370, cy:120, path:“M 300,75 L 380,65 L 420,90 L 415,145 L 375,160 L 325,150 L 300,115 Z”},
+{id:“af”, name:“Afrika”,        bonus:3, cx:370, cy:265, path:“M 305,175 L 390,165 L 425,200 L 428,295 L 390,340 L 345,335 L 308,290 L 300,215 Z”},
+{id:“as”, name:“Azie”,          bonus:7, cx:530, cy:150, path:“M 430,60 L 600,50 L 660,95 L 665,185 L 620,230 L 545,245 L 460,225 L 425,165 L 432,90 Z”},
+{id:“oc”, name:“Oceanie”,       bonus:2, cx:590, cy:315, path:“M 545,275 L 610,265 L 640,295 L 628,345 L 585,355 L 552,330 Z”}
 ]
 },
 europe: {
-label: “🗺 Europe Advanced”,
+label: “Europe Advanced”,
 continents: [
-{id:“weu”, name:“West-Europa”, bonus:3, cx:155, cy:195,
-path:“M 80,150 L 180,140 L 210,175 L 195,240 L 140,260 L 85,230 Z”},
-{id:“neu”, name:“Noord-Europa”, bonus:3, cx:240, cy:110,
-path:“M 175,75 L 300,70 L 320,115 L 285,150 L 195,148 L 170,115 Z”},
-{id:“seu”, name:“Zuid-Europa”, bonus:3, cx:235, cy:240,
-path:“M 195,190 L 300,182 L 320,220 L 295,275 L 235,285 L 192,255 Z”},
-{id:“eeu”, name:“Oost-Europa”, bonus:4, cx:350, cy:185,
-path:“M 310,130 L 420,125 L 445,170 L 430,235 L 365,250 L 308,220 Z”},
-{id:“ru”,  name:“Rusland”,     bonus:5, cx:470, cy:115,
-path:“M 430,65 L 590,60 L 610,120 L 565,165 L 445,170 L 425,120 Z”},
-{id:“me”,  name:“Midden-Oosten”, bonus:3, cx:440, cy:275,
-path:“M 395,225 L 510,220 L 530,265 L 505,315 L 430,320 L 395,280 Z”},
+{id:“weu”, name:“West-Europa”,    bonus:3, cx:155, cy:195, path:“M 80,150 L 180,140 L 210,175 L 195,240 L 140,260 L 85,230 Z”},
+{id:“neu”, name:“Noord-Europa”,   bonus:3, cx:240, cy:110, path:“M 175,75 L 300,70 L 320,115 L 285,150 L 195,148 L 170,115 Z”},
+{id:“seu”, name:“Zuid-Europa”,    bonus:3, cx:235, cy:240, path:“M 195,190 L 300,182 L 320,220 L 295,275 L 235,285 L 192,255 Z”},
+{id:“eeu”, name:“Oost-Europa”,    bonus:4, cx:350, cy:185, path:“M 310,130 L 420,125 L 445,170 L 430,235 L 365,250 L 308,220 Z”},
+{id:“ru”,  name:“Rusland”,        bonus:5, cx:470, cy:115, path:“M 430,65 L 590,60 L 610,120 L 565,165 L 445,170 L 425,120 Z”},
+{id:“me”,  name:“Midden-Oosten”,  bonus:3, cx:440, cy:275, path:“M 395,225 L 510,220 L 530,265 L 505,315 L 430,320 L 395,280 Z”}
 ]
 }
 };
 
-const PLAYER_COLORS = [”#4caf50”,”#e53935”,”#3a7bd5”,”#ff9800”,”#9c27b0”,”#00bcd4”];
+var PLAYER_COLORS = [”#4caf50”,”#e53935”,”#3a7bd5”,”#ff9800”,”#9c27b0”,”#00bcd4”];
+</script>
 
-// ── STRATEGY MAP COMPONENT ───────────────────────────────────────────────
-function StrategyMap({ mapKey, ownedConts, playerColor }) {
-const mapDef = MAPS[mapKey];
-const [radarAngle, setRadarAngle] = useState(0);
-const rafRef = useRef(null);
-const startRef = useRef(null);
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
 
-```
-useEffect(() => {
-  const animate = (ts) => {
-    if (!startRef.current) startRef.current = ts;
-    const elapsed = ts - startRef.current;
-    setRadarAngle((elapsed / 4000) * 360 % 360);
-    rafRef.current = requestAnimationFrame(animate);
-  };
-  rafRef.current = requestAnimationFrame(animate);
-  return () => cancelAnimationFrame(rafRef.current);
-}, []);
+  // ── STRATEGY MAP COMPONENT ───────────────────────────────────────────────
+  function StrategyMap({ mapKey, ownedConts, playerColor }) {
+    const mapDef = MAPS[mapKey];
+    const [radarAngle, setRadarAngle] = useState(0);
+    const rafRef = useRef(null);
+    const startRef = useRef(null);
 
-const W = 700, H = 420;
-const cx = W/2, cy = H/2;
-const rad = Math.min(W,H)/2 - 10;
+    useEffect(() => {
+      const animate = (ts) => {
+        if (!startRef.current) startRef.current = ts;
+        const elapsed = ts - startRef.current;
+        setRadarAngle((elapsed / 4000) * 360 % 360);
+        rafRef.current = requestAnimationFrame(animate);
+      };
+      rafRef.current = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(rafRef.current);
+    }, []);
 
-// Radar sweep path
-const sweepRad = (radarAngle * Math.PI) / 180;
-const sweep2 = ((radarAngle - 45) * Math.PI) / 180;
-const x1 = cx + rad * Math.cos(sweepRad);
-const y1 = cy + rad * Math.sin(sweepRad);
-const x2 = cx + rad * Math.cos(sweep2);
-const y2 = cy + rad * Math.sin(sweep2);
+    const W = 700, H = 420;
+    const cx = W/2, cy = H/2;
+    const rad = Math.min(W,H)/2 - 10;
 
-return (
-  <div style={{flex:1,position:'relative',background:'#050a05',borderRadius:3,overflow:'hidden',minHeight:260}}>
-    <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'100%',display:'block'}}>
-      <defs>
-        <radialGradient id="radarBg" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#0a1a0a"/>
-          <stop offset="100%" stopColor="#020702"/>
-        </radialGradient>
-        <radialGradient id="sweepGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={playerColor} stopOpacity="0.35"/>
-          <stop offset="100%" stopColor={playerColor} stopOpacity="0"/>
-        </radialGradient>
-        <clipPath id="radarClip">
-          <rect width={W} height={H}/>
-        </clipPath>
-      </defs>
+    // Radar sweep path
+    const sweepRad = (radarAngle * Math.PI) / 180;
+    const sweep2 = ((radarAngle - 45) * Math.PI) / 180;
+    const x1 = cx + rad * Math.cos(sweepRad);
+    const y1 = cy + rad * Math.sin(sweepRad);
+    const x2 = cx + rad * Math.cos(sweep2);
+    const y2 = cy + rad * Math.sin(sweep2);
 
-      {/* Background */}
-      <rect width={W} height={H} fill="url(#radarBg)"/>
+    return (
+      <div style={{flex:1,position:'relative',background:'#050a05',borderRadius:3,overflow:'hidden',minHeight:260}}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'100%',display:'block'}}>
+          <defs>
+            <radialGradient id="radarBg" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#0a1a0a"/>
+              <stop offset="100%" stopColor="#020702"/>
+            </radialGradient>
+            <radialGradient id="sweepGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={playerColor} stopOpacity="0.35"/>
+              <stop offset="100%" stopColor={playerColor} stopOpacity="0"/>
+            </radialGradient>
+            <clipPath id="radarClip">
+              <rect width={W} height={H}/>
+            </clipPath>
+          </defs>
 
-      {/* Grid circles */}
-      {[0.25,0.5,0.75,1].map(r=>(
-        <circle key={r} cx={cx} cy={cy} r={rad*r} fill="none" stroke="#1a3a1a" strokeWidth="1"/>
-      ))}
-      {/* Grid lines */}
-      {[0,45,90,135].map(a=>{
-        const ar=a*Math.PI/180;
-        return <line key={a} x1={cx-rad*Math.cos(ar)} y1={cy-rad*Math.sin(ar)} x2={cx+rad*Math.cos(ar)} y2={cy+rad*Math.sin(ar)} stroke="#1a3a1a" strokeWidth="1"/>;
-      })}
+          {/* Background */}
+          <rect width={W} height={H} fill="url(#radarBg)"/>
 
-      {/* Continents on map */}
-      {mapDef.continents.map(c => {
-        const owned = ownedConts.includes(c.id);
-        return (
-          <g key={c.id}>
+          {/* Grid circles */}
+          {[0.25,0.5,0.75,1].map(r=>(
+            <circle key={r} cx={cx} cy={cy} r={rad*r} fill="none" stroke="#1a3a1a" strokeWidth="1"/>
+          ))}
+          {/* Grid lines */}
+          {[0,45,90,135].map(a=>{
+            const ar=a*Math.PI/180;
+            return <line key={a} x1={cx-rad*Math.cos(ar)} y1={cy-rad*Math.sin(ar)} x2={cx+rad*Math.cos(ar)} y2={cy+rad*Math.sin(ar)} stroke="#1a3a1a" strokeWidth="1"/>;
+          })}
+
+          {/* Continents on map */}
+          {mapDef.continents.map(c => {
+            const owned = ownedConts.includes(c.id);
+            return (
+              <g key={c.id}>
+                <path
+                  d={c.path}
+                  fill={owned ? playerColor : "#1a2a1a"}
+                  stroke={owned ? playerColor : "#2e4a2e"}
+                  strokeWidth="2"
+                  opacity={owned ? 0.75 : 0.5}
+                />
+                {/* Continent label */}
+                <text x={c.cx} y={c.cy} textAnchor="middle" dominantBaseline="middle"
+                  fontSize="9" fill={owned ? "white" : "#3a5a3a"}
+                  fontFamily="'Oswald', sans-serif" letterSpacing="0.5">
+                  {c.name.split(" ")[0].toUpperCase()}
+                </text>
+                {/* Bonus badge */}
+                {owned && (
+                  <text x={c.cx} y={c.cy+12} textAnchor="middle" dominantBaseline="middle"
+                    fontSize="8" fill="rgba(200,168,75,0.9)"
+                    fontFamily="'Share Tech Mono', monospace">
+                    +{c.bonus}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+
+          {/* Radar sweep */}
+          <g clipPath="url(#radarClip)">
+            {/* Sweep wedge */}
             <path
-              d={c.path}
-              fill={owned ? playerColor : "#1a2a1a"}
-              stroke={owned ? playerColor : "#2e4a2e"}
-              strokeWidth="2"
-              opacity={owned ? 0.75 : 0.5}
+              d={`M ${cx},${cy} L ${x2},${y2} A ${rad},${rad} 0 0,1 ${x1},${y1} Z`}
+              fill={playerColor}
+              opacity="0.12"
             />
-            {/* Continent label */}
-            <text x={c.cx} y={c.cy} textAnchor="middle" dominantBaseline="middle"
-              fontSize="9" fill={owned ? "white" : "#3a5a3a"}
-              fontFamily="'Oswald', sans-serif" letterSpacing="0.5">
-              {c.name.split(" ")[0].toUpperCase()}
-            </text>
-            {/* Bonus badge */}
-            {owned && (
-              <text x={c.cx} y={c.cy+12} textAnchor="middle" dominantBaseline="middle"
-                fontSize="8" fill="rgba(200,168,75,0.9)"
-                fontFamily="'Share Tech Mono', monospace">
-                +{c.bonus}
-              </text>
-            )}
-          </g>
-        );
-      })}
+            {/* Sweep line */}
+            <line x1={cx} y1={cy} x2={x1} y2={y1} stroke={playerColor} strokeWidth="2" opacity="0.7"/>
 
-      {/* Radar sweep */}
-      <g clipPath="url(#radarClip)">
-        {/* Sweep wedge */}
-        <path
-          d={`M ${cx},${cy} L ${x2},${y2} A ${rad},${rad} 0 0,1 ${x1},${y1} Z`}
-          fill={playerColor}
-          opacity="0.12"
-        />
-        {/* Sweep line */}
-        <line x1={cx} y1={cy} x2={x1} y2={y1} stroke={playerColor} strokeWidth="2" opacity="0.7"/>
-
-        {/* Ping dots on owned continents */}
-        {mapDef.continents.filter(c=>ownedConts.includes(c.id)).map(c=>(
-          <circle key={c.id} cx={c.cx} cy={c.cy} r="5" fill={playerColor} opacity="0.9"/>
-        ))}
-      </g>
-
-      {/* Center dot */}
-      <circle cx={cx} cy={cy} r="4" fill={playerColor} opacity="0.8"/>
-      <circle cx={cx} cy={cy} r="2" fill="white"/>
-
-      {/* Label */}
-      <text x="8" y="14" fontSize="9" fill={playerColor} opacity="0.6"
-        fontFamily="'Oswald', sans-serif" letterSpacing="2">
-        STRATEGIE RADAR
-      </text>
-    </svg>
-  </div>
-);
-```
-
-}
-
-// ── SPLASH ────────────────────────────────────────────────────────────────
-function SplashScreen({ onStart, onBuy }) {
-const [showInfo, setShowInfo] = useState(false);
-const [notify, setNotify] = useState(””);
-useEffect(()=>{ playDrum(); },[]);
-const showNotify = (msg) => { setNotify(msg); setTimeout(()=>setNotify(””),3000); };
-const handleRestore = () => {
-if(localStorage.getItem(‘warboard_pro’)) onBuy();
-else showNotify(“Geen aankoop gevonden.”);
-};
-return (
-<div className="splash">
-<div className="splash-map"/>
-<div className="splash-scanlines"/>
-<div className="splash-vignette"/>
-<div className="splash-content">
-<div className="splash-icon">⚔️</div>
-<div className="splash-title">WarBoard</div>
-<div className="splash-sub">Tactische Assistent</div>
-<div className="splash-divider"/>
-<div className="splash-tagline">De slimste hulp bij jouw Risk potje. Bereken troepen, simuleer gevechten en domineer het slagveld.</div>
-<button className="splash-btn-start" onClick={onStart}>▶ START — GRATIS</button>
-<button className="splash-btn-buy" onClick={onBuy}>👑 BUY NOW — €1,99</button>
-<button className=“splash-info-btn” onClick={()=>setShowInfo(true)}>ℹ</button>
-<button className="splash-restore" onClick={handleRestore}>Restore Purchase</button>
-<div className="splash-version">v4.0 — WARBOARD ASSISTANT</div>
-</div>
-{showInfo && (
-<div className=“modal-bg” onClick={()=>setShowInfo(false)}>
-<div className=“modal” onClick={e=>e.stopPropagation()}>
-<div className="modal-title">Over WarBoard <button className=“modal-close” onClick={()=>setShowInfo(false)}>✕</button></div>
-<div className="modal-section">
-<div className="modal-section-title">Wat is WarBoard?</div>
-<div className="modal-text">WarBoard is een tactische assistent voor Risk. De app helpt je met troepen berekenen, gevechten simuleren, kaarten wisselen en je strategie uitdenken.</div>
-</div>
-<div className="modal-section">
-<div className="modal-section-title">Functies</div>
-{[[“🎖”,“Troepen Calculator”,“Bereken versterkingen op basis van gebieden, continenten en capitals.”],
-[“⚔️”,“Gevecht Simulator”,“Simuleer duizenden gevechten. Weet van tevoren of een aanval loont.”],
-[“🗺”,“Kaart Selectie”,“Wissel tussen Wereldkaart en Europe Advanced met automatische bonussen.”],
-[“📡”,“Strategie Radar”,“Interactieve kaart op iPad/desktop. Klik continenten aan, radar toont jouw bezit.”],
-[“👑”,“Capitals Modus”,“Speel met capitals variant en ontvang bonustroepen.”],
-[“🔒”,“Scherm Vergrendeling”,“Vergrendel het scherm tijdens het spel.”]
-].map(([icon,title,text])=>(
-<div key={title} className="modal-feature">
-<div className="modal-feature-icon">{icon}</div>
-<div><div className="modal-feature-title">{title}</div><div className="modal-feature-text">{text}</div></div>
-</div>
-))}
-</div>
-<button className=“btn” style={{marginTop:8}} onClick={()=>setShowInfo(false)}>SLUITEN</button>
-</div>
-</div>
-)}
-{notify && <div className="notify">{notify}</div>}
-</div>
-);
-}
-
-// ── AD SCREEN ─────────────────────────────────────────────────────────────
-function AdScreen({ onDone }) {
-const [timeLeft, setTimeLeft] = useState(30);
-const [canSkip, setCanSkip] = useState(false);
-const circ = 2*Math.PI*30;
-const progress = (timeLeft/30)*circ;
-useEffect(()=>{
-const t = setInterval(()=>{
-setTimeLeft(p=>{
-if(p<=1){ clearInterval(t); setCanSkip(true); return 0; }
-if(p<=6) setCanSkip(true);
-return p-1;
-});
-},1000);
-return ()=>clearInterval(t);
-},[]);
-return (
-<div className="adscreen">
-<div style={{fontFamily:‘var(–fh)’,fontSize:11,letterSpacing:3,color:‘var(–muted)’,marginBottom:8}}>ADVERTENTIE</div>
-<div className="ad-placeholder">
-<div style={{fontSize:32}}>📢</div>
-<div style={{fontFamily:‘var(–fh)’,fontSize:14,color:‘var(–muted)’,letterSpacing:2}}>ADVERTENTIE RUIMTE</div>
-<div style={{fontSize:11,color:‘var(–muted)’,opacity:0.5,marginTop:4}}>Hier komt straks jouw advertentie</div>
-</div>
-<div className="ad-timer-ring">
-<svg width="72" height="72" viewBox="0 0 72 72"><circle cx="36" cy="36" r="30" fill="none" stroke="var(--border)" strokeWidth="4" transform="rotate(-90 36 36)"/><circle cx=“36” cy=“36” r=“30” fill=“none” stroke=“var(–accent)” strokeWidth=“4” strokeDasharray={circ} strokeDashoffset={circ-progress} strokeLinecap=“round” transform=“rotate(-90 36 36)” style={{transition:‘stroke-dashoffset 0.9s linear’}}/></svg>
-<div className="ad-timer-num">{timeLeft}</div>
-</div>
-<button className={`ad-skip ${canSkip?'active':''}`} onClick={()=>canSkip&&onDone()} disabled={!canSkip}>
-{canSkip?‘▶ DOORGAAN NAAR APP’:`Wacht ${timeLeft} seconden...`}
-</button>
-</div>
-);
-}
-
-// ── MAIN APP ──────────────────────────────────────────────────────────────
-function App() {
-const [screen, setScreen] = useState(“splash”);
-const [tab, setTab] = useState(“calc”);
-const [myTerr, setMyTerr] = useState(12);
-const [myCaps, setMyCaps] = useState(0);
-const [totalCaps, setTotalCaps] = useState(4);
-const [capsMode, setCapsMode] = useState(true);
-const [flash, setFlash] = useState(””);
-const [locked, setLocked] = useState(false);
-
-```
-// Map selection
-const [activeMap, setActiveMap] = useState("world");
-const mapDef = MAPS[activeMap];
-
-// Player color for strategy map
-const [playerColor, setPlayerColor] = useState("#4caf50");
-
-const applyFlash = (t) => { setFlash(t); setTimeout(()=>setFlash(""),600); };
-const gainTerr = () => { setMyTerr(t=>t+1); applyFlash("w"); };
-const loseTerr = () => { setMyTerr(t=>Math.max(1,t-1)); applyFlash("l"); };
-const gainCap = () => { setMyCaps(c=>Math.min(c+1,totalCaps)); applyFlash("w"); };
-const loseCap = () => { setMyCaps(c=>Math.max(0,c-1)); applyFlash("l"); };
-const hasWon = capsMode && myCaps>=totalCaps && totalCaps>0;
-
-// Continents — derived from active map
-const [contsWorld, setContsWorld] = useState(MAPS.world.continents.map(c=>({...c})));
-const [contsEurope, setContsEurope] = useState(MAPS.europe.continents.map(c=>({...c})));
-const conts = activeMap==="world" ? contsWorld : contsEurope;
-const setConts = activeMap==="world" ? setContsWorld : setContsEurope;
-
-const [newCont, setNewCont] = useState({name:"",bonus:""});
-const [ownedConts, setOwnedConts] = useState([]);
-
-// When map changes, reset owned continents
-const switchMap = (key) => {
-  setActiveMap(key);
-  setOwnedConts([]);
-};
-
-const toggleCont = (id) => setOwnedConts(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-const baseR = Math.max(3, Math.floor(myTerr/3));
-const contBonus = ownedConts.reduce((s,id)=>s+(conts.find(c=>c.id===id)?.bonus||0),0);
-const capBonus = capsMode ? myCaps*2 : 0;
-const totalR = baseR+contBonus+capBonus;
-
-// Battle state
-const [atkT,setAtkT]=useState(10);
-const [defT,setDefT]=useState(5);
-const [atkDice,setAtkDice]=useState(3);
-const [defDice,setDefDice]=useState(2);
-const [isCap,setIsCap]=useState(false);
-const [simRes,setSimRes]=useState(null);
-const [liveR,setLiveR]=useState(null);
-const [bLog,setBLog]=useState([]);
-const [simN,setSimN]=useState(1000);
-const [atkRem,setAtkRem]=useState(null);
-const [defRem,setDefRem]=useState(null);
-const [rnd,setRnd]=useState(0);
-
-const effDef=isCap?3:defDice;
-const battleOver=atkRem!==null&&(atkRem<=1||defRem<=0);
-const runSim=()=>setSimRes(simulate(Number(atkT),Number(defT),atkDice,effDef,Number(simN)));
-const startBattle=()=>{setAtkRem(Number(atkT));setDefRem(Number(defT));setRnd(0);setBLog([]);setLiveR(null);setSimRes(null);};
-const rollRound=()=>{
-  const ca=atkRem!==null?atkRem:Number(atkT),cd=defRem!==null?defRem:Number(defT);
-  const r=doRound(Math.min(atkDice,ca-1),Math.min(effDef,cd));
-  const na=Math.max(0,ca-r.aLoss),nd=Math.max(0,cd-r.dLoss),nr=rnd+1;
-  setLiveR(r);setAtkRem(na);setDefRem(nd);setRnd(nr);
-  setBLog(p=>[...p,{round:nr,ad:r.ad,dd:r.dd,aLoss:r.aLoss,dLoss:r.dLoss,atkAfter:na,defAfter:nd,cap:isCap}]);
-};
-const autoFinish=()=>{
-  let ca=atkRem!==null?atkRem:Number(atkT),cd=defRem!==null?defRem:Number(defT),cr=rnd;
-  const entries=[];
-  while(ca>1&&cd>0){const r=doRound(Math.min(atkDice,ca-1),Math.min(effDef,cd));ca=Math.max(0,ca-r.aLoss);cd=Math.max(0,cd-r.dLoss);cr++;entries.push({round:cr,ad:r.ad,dd:r.dd,aLoss:r.aLoss,dLoss:r.dLoss,atkAfter:ca,defAfter:cd,cap:isCap});}
-  setBLog(p=>[...p,...entries]);setAtkRem(ca);setDefRem(cd);setRnd(cr);
-  if(entries.length>0){const l=entries[entries.length-1];setLiveR({ad:l.ad,dd:l.dd,aLoss:l.aLoss,dLoss:l.dLoss});}
-};
-const battleWon=()=>{gainTerr();setTab("calc");};
-const battleLost=()=>{loseTerr();setTab("calc");};
-const addCont=()=>{
-  if(!newCont.name)return;
-  setConts(p=>[...p,{id:'c'+Date.now(),name:newCont.name,bonus:Number(newCont.bonus)||0,cx:350,cy:200,path:""}]);
-  setNewCont({name:"",bonus:""});
-};
-const delCont=(id)=>{setConts(p=>p.filter(c=>c.id!==id));setOwnedConts(p=>p.filter(x=>x!==id));};
-const handleBuy=()=>{localStorage.setItem('warboard_pro','1');setScreen("app");};
-
-if(screen==="splash") return <SplashScreen onStart={()=>setScreen("ad")} onBuy={handleBuy}/>;
-if(screen==="ad") return <AdScreen onDone={()=>setScreen("app")}/>;
-
-return (
-  <div className={`app ${flash==='w'?'fw':flash==='l'?'fl':''}`}>
-    <div className="scanlines"/>
-
-    {/* LOCK SCREEN */}
-    {locked && (
-      <div onClick={()=>setLocked(false)} style={{position:'absolute',inset:0,zIndex:800,background:'rgba(13,15,10,0.97)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,cursor:'pointer'}}>
-        <div style={{fontSize:64}}>🔒</div>
-        <div style={{fontFamily:'var(--fh)',fontSize:24,fontWeight:700,color:'var(--muted)',letterSpacing:4}}>VERGRENDELD</div>
-        <div style={{fontSize:12,color:'var(--muted)',letterSpacing:2}}>TIK ERGENS OM TE ONTGRENDELEN</div>
-        <div style={{marginTop:16,display:'flex',gap:24,fontSize:13,color:'var(--muted)',fontFamily:'var(--fh)',flexWrap:'wrap',justifyContent:'center'}}>
-          <span>🎖 {myTerr} gebieden</span>
-          {capsMode&&<span style={{color:'var(--capital)'}}>👑 {myCaps}/{totalCaps} capitals</span>}
-          <span style={{color:'var(--accent)'}}>+{totalR} troepen/beurt</span>
-        </div>
-      </div>
-    )}
-
-    {/* WIN SCREEN */}
-    {hasWon && (
-      <div style={{position:'absolute',inset:0,zIndex:600,background:'rgba(13,15,10,0.96)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20}}>
-        <div style={{fontSize:80}}>👑</div>
-        <div style={{fontFamily:'var(--fh)',fontSize:36,fontWeight:700,color:'var(--accent)',letterSpacing:4,textAlign:'center'}}>OVERWINNING!</div>
-        <div style={{fontSize:14,color:'var(--muted)',letterSpacing:2}}>Alle {totalCaps} capitals veroverd</div>
-        <button className="btn" style={{width:'auto',padding:'14px 40px',marginTop:10,fontSize:15}} onClick={()=>{setMyCaps(0);setMyTerr(12);}}>↺ NIEUW SPEL</button>
-      </div>
-    )}
-
-    {/* HEADER */}
-    <div className="header">
-      <div style={{display:'flex',alignItems:'center',gap:10}}>
-        <div><div className="htitle">⚔ WarBoard</div><div className="hsub">TACTISCHE ASSISTENT v4.0</div></div>
-        <button onClick={()=>setLocked(true)} style={{background:'transparent',border:'1px solid var(--border)',borderRadius:3,color:'var(--muted)',cursor:'pointer',padding:'6px 10px',fontSize:16,lineHeight:1}}>🔒</button>
-        <button className={`modebtn ${capsMode?'on':''}`} onClick={()=>setCapsMode(m=>!m)}>{capsMode?'👑 CAPITALS AAN':'⚔ NORMAAL RISK'}</button>
-      </div>
-      <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
-        <div style={{display:'flex',gap:6,alignItems:'center'}}>
-          <button className="btn red sm" style={{width:'auto',padding:'6px 12px',fontSize:16}} onClick={loseTerr}>−</button>
-          <div className="hstat"><div className="hval">{myTerr}</div><div className="hlbl">GEBIEDEN</div></div>
-          <button className="btn grn sm" style={{width:'auto',padding:'6px 12px',fontSize:16}} onClick={gainTerr}>+</button>
-        </div>
-        {capsMode&&<>
-          <div style={{width:1,height:32,background:'var(--border)'}}/>
-          <div style={{display:'flex',gap:6,alignItems:'center'}}>
-            <button className="btn sm" style={{width:'auto',padding:'6px 12px',fontSize:16,background:'transparent',border:'1px solid var(--capital)',color:'var(--capital)'}} onClick={loseCap}>−</button>
-            <div className="hstat"><div className="hval" style={{color:'var(--capital)'}}>{myCaps}<span style={{fontSize:12,color:'var(--muted)'}}>/{totalCaps}</span></div><div className="hlbl">👑 CAPITALS</div></div>
-            <button className="btn bcap sm" style={{width:'auto',padding:'6px 12px',fontSize:16}} onClick={gainCap}>+</button>
-          </div>
-        </>}
-        <div style={{width:1,height:32,background:'var(--border)'}}/>
-        <div className="hstat"><div className="hval">{totalR}</div><div className="hlbl">TROEPEN/BEURT</div></div>
-      </div>
-    </div>
-
-    {/* NAV */}
-    <div className="nav">
-      {[{id:"calc",label:"🎖 Troepen"},{id:"battle",label:"⚔ Gevecht"},{id:"map",label:"🗺 Kaart"}].map(t=>(
-        <button key={t.id} className={`nb${tab===t.id?" on":""}`} onClick={()=>setTab(t.id)}>{t.label}</button>
-      ))}
-    </div>
-
-    {/* ── TROEPEN TAB ── */}
-    {tab==="calc" && (
-      <div className="content">
-        <div className="col">
-          <div className="card">
-            <div className="ctitle">Gebieden Teller</div>
-            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:10}}>
-              <button className="btn red" style={{width:48,padding:'10px 0',fontSize:20}} onClick={loseTerr}>−</button>
-              <input type="number" inputMode="numeric" pattern="[0-9]*" min="1" value={myTerr} onChange={e=>setMyTerr(Number(e.target.value)||1)} style={{textAlign:'center',fontSize:28,fontFamily:'var(--fh)',fontWeight:700}}/>
-              <button className="btn grn" style={{width:48,padding:'10px 0',fontSize:20}} onClick={gainTerr}>+</button>
-            </div>
-            <div className="rbox">
-              <div className="rnum">{totalR}</div>
-              <div className="rlbl">VERSTERKINGEN DEZE BEURT</div>
-              <div className="bdown">Basis: <span>{myTerr} ÷ 3 = {baseR}</span><br/>Continent: <span>+{contBonus}</span>{capsMode&&<> &nbsp;|&nbsp; Capitals: <span style={{color:'var(--capital)'}}>+{capBonus}</span></>}</div>
-              <div className="prog"><div className="pfill" style={{width:`${Math.min(100,(totalR/45)*100)}%`}}/></div>
-            </div>
-          </div>
-          {capsMode&&(
-            <div className="card cc">
-              <div className="ctitle">👑 Capitals</div>
-              <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:12}}>
-                <button className="btn sm" style={{width:48,padding:'10px 0',fontSize:20,background:'transparent',border:'1px solid var(--capital)',color:'var(--capital)'}} onClick={loseCap}>−</button>
-                <div style={{flex:1,textAlign:'center'}}>
-                  <div style={{fontFamily:'var(--fh)',fontSize:36,fontWeight:700,color:'var(--capital)',lineHeight:1}}>{myCaps}<span style={{fontSize:20,color:'var(--muted)'}}>/{totalCaps}</span></div>
-                  <div style={{fontSize:10,color:'var(--muted)',letterSpacing:1,marginTop:4}}>VEROVERD</div>
-                </div>
-                <button className="btn bcap sm" style={{width:48,padding:'10px 0',fontSize:20}} onClick={gainCap}>+</button>
-              </div>
-              <div style={{display:'flex',gap:8,justifyContent:'center',marginBottom:12}}>
-                {Array.from({length:totalCaps}).map((_,i)=>(
-                  <div key={i} onClick={()=>setMyCaps(i<myCaps?i:i+1)} style={{width:36,height:36,borderRadius:'50%',cursor:'pointer',transition:'all 0.2s',background:i<myCaps?'var(--capital)':'var(--bg)',border:`2px solid ${i<myCaps?'var(--capital)':'var(--border)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{i<myCaps?'👑':''}</div>
-                ))}
-              </div>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <div style={{fontSize:12,color:'var(--muted)'}}>+2 troepen per capital</div>
-                <div style={{fontFamily:'var(--fh)',fontSize:13,color:'var(--capital)'}}>BONUS: +{capBonus}</div>
-              </div>
-              <div className="sdiv"/>
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <div style={{fontSize:11,color:'var(--muted)',whiteSpace:'nowrap'}}>CAPITALS IN SPEL:</div>
-                <div style={{display:'flex',gap:6}}>
-                  {[2,3,4,5,6].map(n=>(
-                    <div key={n} onClick={()=>{setTotalCaps(n);setMyCaps(c=>Math.min(c,n));}} style={{width:28,height:28,borderRadius:3,cursor:'pointer',background:totalCaps===n?'var(--capital)':'var(--bg)',border:`1px solid ${totalCaps===n?'var(--capital)':'var(--border)'}`,color:totalCaps===n?'white':'var(--muted)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'var(--fh)',fontSize:13,fontWeight:700,transition:'all 0.15s'}}>{n}</div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="col">
-          <div className="card">
-            <div className="ctitle">Continent Bonus</div>
-            {/* Map switcher */}
-            <div className="map-switcher">
-              <button className={`map-switch-btn ${activeMap==='world'?'active':''}`} onClick={()=>switchMap('world')}>🌍 Wereldkaart</button>
-              <button className={`map-switch-btn ${activeMap==='europe'?'active':''}`} onClick={()=>switchMap('europe')}>🗺 Europe Advanced</button>
-            </div>
-            {conts.map(c=>(
-              <button key={c.id} onClick={()=>toggleCont(c.id)} className="contbtn" style={{background:ownedConts.includes(c.id)?`${playerColor}22`:'var(--bg)',border:`1px solid ${ownedConts.includes(c.id)?playerColor:'var(--border)'}`,color:ownedConts.includes(c.id)?playerColor:'var(--muted)'}}>
-                <span style={{fontSize:14}}>{ownedConts.includes(c.id)?'✓ ':''}{c.name}</span>
-                <span style={{fontSize:12,opacity:0.8,fontFamily:'var(--fh)',letterSpacing:1}}>+{c.bonus}</span>
-              </button>
+            {/* Ping dots on owned continents */}
+            {mapDef.continents.filter(c=>ownedConts.includes(c.id)).map(c=>(
+              <circle key={c.id} cx={c.cx} cy={c.cy} r="5" fill={playerColor} opacity="0.9"/>
             ))}
-          </div>
-        </div>
-      </div>
-    )}
+          </g>
 
-    {/* ── GEVECHT TAB ── */}
-    {tab==="battle" && (
-      <div className="content">
-        <div className="col">
-          <div className={`card ${isCap?'cc':''}`}>
-            <div className="ctitle">{isCap?'👑 Kapitaal Aanval':'Gevecht Instellingen'}</div>
-            <div style={{display:'flex',gap:8,marginBottom:10}}>
-              <button style={{flex:1,padding:'8px',background:!isCap?'var(--accent)':'transparent',border:`1px solid ${!isCap?'var(--accent)':'var(--border)'}`,color:!isCap?'#0d0f0a':'var(--muted)',borderRadius:3,fontFamily:'var(--fh)',fontSize:12,cursor:'pointer'}} onClick={()=>setIsCap(false)}>NORMAAL</button>
-              <button style={{flex:1,padding:'8px',background:isCap?'var(--capital)':'transparent',border:`1px solid ${isCap?'var(--capital)':'var(--border)'}`,color:isCap?'white':'var(--muted)',borderRadius:3,fontFamily:'var(--fh)',fontSize:12,cursor:'pointer'}} onClick={()=>setIsCap(true)}>👑 KAPITAAL</button>
-            </div>
-            {isCap&&<div style={{background:'rgba(156,39,176,0.1)',border:'1px solid var(--capital)',borderRadius:3,padding:'8px 12px',marginBottom:10,fontSize:11,color:'var(--capital)'}}>KAPITAAL: Verdediger gooit altijd 3 dobbelstenen</div>}
-            <div className="row">
-              <div><label>⚔ Aanvaller troepen</label><input type="number" inputMode="numeric" pattern="[0-9]*" min="2" value={atkT} onChange={e=>setAtkT(e.target.value)}/></div>
-              <div><label>🛡 Verdediger troepen</label><input type="number" inputMode="numeric" pattern="[0-9]*" min="1" value={defT} onChange={e=>setDefT(e.target.value)}/></div>
-            </div>
-            <label style={{marginBottom:6}}>⚔ Aanvaller dobbelstenen</label>
-            <div className="dsel">{[1,2,3].map(n=><div key={n} className={`dopt ${atkDice===n?'da':''}`} onClick={()=>setAtkDice(n)}>{n}</div>)}</div>
-            <label style={{marginBottom:6}}>🛡 Verdediger dobbelstenen {isCap&&<span className="cbadge">👑 VAST: 3</span>}</label>
-            <div className="dsel" style={{opacity:isCap?0.35:1,pointerEvents:isCap?'none':'auto'}}>{[1,2,3].map(n=><div key={n} className={`dopt ${effDef===n?(isCap?'dc':'dd'):''}`} onClick={()=>setDefDice(n)}>{n}</div>)}</div>
-            <label style={{marginTop:10,marginBottom:4}}>Simulaties: {simN}</label>
-            <input type="range" min="100" max="5000" step="100" value={simN} onChange={e=>setSimN(e.target.value)} style={{marginBottom:12}}/>
-            <div className="row" style={{marginBottom:6}}>
-              <button className="btn" onClick={runSim}>Simuleer</button>
-              <button className={`btn ${isCap?'bcap':'red'}`} onClick={rollRound} disabled={battleOver}>Gooi Dobbelstenen</button>
-            </div>
-            <button className="btn blue" style={{marginBottom:6}} onClick={autoFinish} disabled={battleOver}>⚡ GEVECHT AFMAKEN</button>
-            <button className="btn ghost" style={{fontSize:11,padding:'8px'}} onClick={startBattle}>↺ NIEUW GEVECHT STARTEN</button>
-          </div>
-          {simRes!==null&&(
-            <div className="card">
-              <div className="bres">
-                <div className="side sa"><div className="slbl">AANVALLER</div><div className="spct">{simRes}%</div></div>
-                <div className="vs">VS</div>
-                <div className={`side ${isCap?'sc':'sd'}`}><div className="slbl">{isCap?'👑 KAPITAAL':'VERDEDIGER'}</div><div className="spct">{100-simRes}%</div></div>
-              </div>
-              <div style={{textAlign:'center',marginTop:8}}><span className={`tag ${simRes>=60?'g':simRes>=40?'o':'r'}`}>{simRes>=60?'✓ AANRADEN':simRes>=40?'⚠ TWIJFELACHTIG':'✗ RISKANT'}</span></div>
-            </div>
-          )}
+          {/* Center dot */}
+          <circle cx={cx} cy={cy} r="4" fill={playerColor} opacity="0.8"/>
+          <circle cx={cx} cy={cy} r="2" fill="white"/>
+
+          {/* Label */}
+          <text x="8" y="14" fontSize="9" fill={playerColor} opacity="0.6"
+            fontFamily="'Oswald', sans-serif" letterSpacing="2">
+            STRATEGIE RADAR
+          </text>
+        </svg>
+      </div>
+    );
+  }
+
+  // ── SPLASH ────────────────────────────────────────────────────────────────
+  function SplashScreen({ onStart, onBuy }) {
+    const [showInfo, setShowInfo] = useState(false);
+    const [notify, setNotify] = useState("");
+    useEffect(()=>{ playDrum(); },[]);
+    const showNotify = (msg) => { setNotify(msg); setTimeout(()=>setNotify(""),3000); };
+    const handleRestore = () => {
+      if(localStorage.getItem('warboard_pro')) onBuy();
+      else showNotify("Geen aankoop gevonden.");
+    };
+    return (
+      <div className="splash">
+        <div className="splash-map"/>
+        <div className="splash-scanlines"/>
+        <div className="splash-vignette"/>
+        <div className="splash-content">
+          <div className="splash-icon">⚔️</div>
+          <div className="splash-title">WarBoard</div>
+          <div className="splash-sub">Tactische Assistent</div>
+          <div className="splash-divider"/>
+          <div className="splash-tagline">De slimste hulp bij jouw Risk potje. Bereken troepen, simuleer gevechten en domineer het slagveld.</div>
+          <button className="splash-btn-start" onClick={onStart}>▶ START — GRATIS</button>
+          <button className="splash-btn-buy" onClick={onBuy}>👑 BUY NOW — €1,99</button>
+          <button className="splash-info-btn" onClick={()=>setShowInfo(true)}>ℹ</button>
+          <button className="splash-restore" onClick={handleRestore}>Restore Purchase</button>
+          <div className="splash-version">v4.0 — WARBOARD ASSISTANT</div>
         </div>
-        <div className="col">
-          {liveR&&(
-            <div className={`card ${isCap?'cc':''}`}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                <div className="ctitle" style={{marginBottom:0}}>Ronde {rnd}</div>
-                <div style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--fh)'}}><span style={{color:'var(--accent2)'}}>{atkRem}⚔</span> <span style={{color:isCap?'var(--capital)':'var(--blue)'}}>{defRem}🛡</span></div>
+        {showInfo && (
+          <div className="modal-bg" onClick={()=>setShowInfo(false)}>
+            <div className="modal" onClick={e=>e.stopPropagation()}>
+              <div className="modal-title">Over WarBoard <button className="modal-close" onClick={()=>setShowInfo(false)}>✕</button></div>
+              <div className="modal-section">
+                <div className="modal-section-title">Wat is WarBoard?</div>
+                <div className="modal-text">WarBoard is een tactische assistent voor Risk. De app helpt je met troepen berekenen, gevechten simuleren, kaarten wisselen en je strategie uitdenken.</div>
               </div>
-              <div style={{display:'flex',gap:16,justifyContent:'center',alignItems:'center'}}>
-                <div style={{textAlign:'center'}}><div style={{fontSize:10,color:'var(--muted)',marginBottom:6}}>AANVALLER</div><div className="drow">{liveR.ad.map((d,i)=><div key={i} className="die da">{d}</div>)}</div></div>
-                <div style={{fontFamily:'var(--fh)',fontSize:13,color:'var(--muted)'}}>VS</div>
-                <div style={{textAlign:'center'}}><div style={{fontSize:10,color:isCap?'var(--capital)':'var(--muted)',marginBottom:6}}>{isCap?'👑 KAPITAAL':'VERDEDIGER'}</div><div className="drow">{liveR.dd.map((d,i)=><div key={i} className={`die ${isCap?'dc':'dd'}`}>{d}</div>)}</div></div>
-              </div>
-              <div style={{textAlign:'center',marginTop:10,fontSize:13,color:'var(--muted)'}}>Aanvaller verliest <span style={{color:'var(--accent2)',fontWeight:'bold'}}>{liveR.aLoss}</span> &nbsp;|&nbsp; Verdediger verliest <span style={{color:'var(--green)',fontWeight:'bold'}}>{liveR.dLoss}</span></div>
-            </div>
-          )}
-          <div className="card">
-            <div className="ctitle">Gevecht Uitkomst</div>
-            <div style={{fontSize:12,color:'var(--muted)',marginBottom:8,lineHeight:1.6}}>Registreer het resultaat:</div>
-            <div className="outrow">
-              <button className="btn grn" onClick={battleWon}>✓ Gewonnen<br/><span style={{fontSize:11,fontWeight:400}}>+1 gebied</span></button>
-              <button className="btn red" onClick={battleLost}>✗ Verloren<br/><span style={{fontSize:11,fontWeight:400}}>−1 gebied</span></button>
-            </div>
-            <div style={{marginTop:10,textAlign:'center',fontSize:13,fontFamily:'var(--fh)',color:'var(--muted)'}}>NU: <span style={{color:'var(--accent)',fontSize:18}}>{myTerr}</span> &nbsp;→&nbsp; <span style={{color:'var(--green)'}}>{myTerr+1}</span> of <span style={{color:'var(--red)'}}>{Math.max(1,myTerr-1)}</span></div>
-          </div>
-          {bLog.length>0&&(
-            <div className="card">
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                <div className="ctitle" style={{marginBottom:0}}>Gevecht Log</div>
-                <div style={{fontSize:11,fontFamily:'var(--fh)',display:'flex',gap:10}}><span style={{color:'var(--accent2)'}}>ATK:{atkRem??Number(atkT)}</span><span style={{color:isCap?'var(--capital)':'var(--blue)'}}>DEF:{defRem??Number(defT)}</span></div>
-              </div>
-              <div className="olog">
-                <div className="lhdr"><span>RND · AANVALLER · VERDEDIGER</span><span>VERLIES</span></div>
-                {bLog.map((e,i)=>(
-                  <div key={i} className="lrnd">
-                    <span className="lrnum">R{e.round}</span>
-                    <div className="ldice">{e.ad.map((d,j)=><div key={j} className="ldie a">{d}</div>)}</div>
-                    <span style={{fontSize:10,color:'var(--muted)'}}>vs</span>
-                    <div className="ldice">{e.dd.map((d,j)=><div key={j} className={`ldie ${e.cap?'c':'d'}`}>{d}</div>)}</div>
-                    <span style={{flex:1}}/>
-                    <span style={{fontSize:10,fontFamily:'var(--fh)'}}>
-                      {e.aLoss>0&&<span style={{color:'var(--accent2)'}}>−{e.aLoss}⚔</span>}
-                      {e.dLoss>0&&<span style={{color:e.cap?'var(--capital)':'var(--blue)'}}>−{e.dLoss}🛡</span>}
-                      {e.aLoss===0&&e.dLoss===0&&<span style={{color:'var(--muted)'}}>—</span>}
-                    </span>
-                    <span style={{fontSize:10,color:'var(--muted)',minWidth:56,textAlign:'right'}}>{e.atkAfter}⚔{e.defAfter}🛡</span>
+              <div className="modal-section">
+                <div className="modal-section-title">Functies</div>
+                {[["🎖","Troepen Calculator","Bereken versterkingen op basis van gebieden, continenten en capitals."],
+                  ["⚔️","Gevecht Simulator","Simuleer duizenden gevechten. Weet van tevoren of een aanval loont."],
+                  ["🗺","Kaart Selectie","Wissel tussen Wereldkaart en Europe Advanced met automatische bonussen."],
+                  ["📡","Strategie Radar","Interactieve kaart op iPad/desktop. Klik continenten aan, radar toont jouw bezit."],
+                  ["👑","Capitals Modus","Speel met capitals variant en ontvang bonustroepen."],
+                  ["🔒","Scherm Vergrendeling","Vergrendel het scherm tijdens het spel."]
+                ].map(([icon,title,text])=>(
+                  <div key={title} className="modal-feature">
+                    <div className="modal-feature-icon">{icon}</div>
+                    <div><div className="modal-feature-title">{title}</div><div className="modal-feature-text">{text}</div></div>
                   </div>
                 ))}
-                {(()=>{const tA=bLog.reduce((s,e)=>s+e.aLoss,0),tD=bLog.reduce((s,e)=>s+e.dLoss,0),last=bLog[bLog.length-1],over=last.atkAfter<=1||last.defAfter<=0;return(<div className="lsum"><span style={{color:'var(--muted)'}}>{bLog.length} rondes</span><span><span style={{color:'var(--accent2)'}}>ATK −{tA}</span><span style={{color:'var(--muted)'}}> | </span><span style={{color:isCap?'var(--capital)':'var(--blue)'}}>DEF −{tD}</span></span>{over&&<span style={{color:last.defAfter<=0?'var(--green)':'var(--red)',fontWeight:'bold'}}>{last.defAfter<=0?'✓ GEWONNEN':'✗ GESTOPT'}</span>}</div>);})()}
               </div>
+              <button className="btn" style={{marginTop:8}} onClick={()=>setShowInfo(false)}>SLUITEN</button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+        {notify && <div className="notify">{notify}</div>}
       </div>
-    )}
+    );
+  }
 
-    {/* ── KAART TAB ── */}
-    {tab==="map" && (
-      <div className="content">
-        {/* Left col — continent beheer */}
-        <div className="col">
-          <div className="card">
-            <div className="ctitle">Continent Beheer</div>
-            {/* Map switcher */}
-            <div className="map-switcher">
-              <button className={`map-switch-btn ${activeMap==='world'?'active':''}`} onClick={()=>switchMap('world')}>🌍 Wereldkaart</button>
-              <button className={`map-switch-btn ${activeMap==='europe'?'active':''}`} onClick={()=>switchMap('europe')}>🗺 Europe Advanced</button>
-            </div>
-            {conts.map(c=>(
-              <div key={c.id} className="crow">
-                <input type="text" value={c.name} style={{flex:2,fontSize:15}} onChange={e=>setConts(p=>p.map(x=>x.id===c.id?{...x,name:e.target.value}:x))}/>
-                <input type="number" inputMode="numeric" pattern="[0-9]*" value={c.bonus} style={{flex:1,fontSize:15}} onChange={e=>setConts(p=>p.map(x=>x.id===c.id?{...x,bonus:Number(e.target.value)}:x))}/>
-                <button className="delbtn" onClick={()=>delCont(c.id)}>✕</button>
-              </div>
-            ))}
-            <div className="sdiv"/>
-            <div style={{fontSize:11,color:'var(--muted)',marginBottom:8,letterSpacing:1}}>NIEUW CONTINENT</div>
-            <div className="crow">
-              <input type="text" placeholder="Naam" value={newCont.name} style={{flex:2,fontSize:15}} onChange={e=>setNewCont(p=>({...p,name:e.target.value}))}/>
-              <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="Bonus" value={newCont.bonus} style={{flex:1,fontSize:15}} onChange={e=>setNewCont(p=>({...p,bonus:e.target.value}))}/>
-              <button className="btn sm" style={{width:'auto',padding:'8px 14px',fontSize:18}} onClick={addCont}>+</button>
+  // ── AD SCREEN ─────────────────────────────────────────────────────────────
+  function AdScreen({ onDone }) {
+    const [timeLeft, setTimeLeft] = useState(30);
+    const [canSkip, setCanSkip] = useState(false);
+    const circ = 2*Math.PI*30;
+    const progress = (timeLeft/30)*circ;
+    useEffect(()=>{
+      const t = setInterval(()=>{
+        setTimeLeft(p=>{
+          if(p<=1){ clearInterval(t); setCanSkip(true); return 0; }
+          if(p<=6) setCanSkip(true);
+          return p-1;
+        });
+      },1000);
+      return ()=>clearInterval(t);
+    },[]);
+    return (
+      <div className="adscreen">
+        <div style={{fontFamily:'var(--fh)',fontSize:11,letterSpacing:3,color:'var(--muted)',marginBottom:8}}>ADVERTENTIE</div>
+        <div className="ad-placeholder">
+          <div style={{fontSize:32}}>📢</div>
+          <div style={{fontFamily:'var(--fh)',fontSize:14,color:'var(--muted)',letterSpacing:2}}>ADVERTENTIE RUIMTE</div>
+          <div style={{fontSize:11,color:'var(--muted)',opacity:0.5,marginTop:4}}>Hier komt straks jouw advertentie</div>
+        </div>
+        <div className="ad-timer-ring">
+          <svg width="72" height="72" viewBox="0 0 72 72"><circle cx="36" cy="36" r="30" fill="none" stroke="var(--border)" strokeWidth="4" transform="rotate(-90 36 36)"/><circle cx="36" cy="36" r="30" fill="none" stroke="var(--accent)" strokeWidth="4" strokeDasharray={circ} strokeDashoffset={circ-progress} strokeLinecap="round" transform="rotate(-90 36 36)" style={{transition:'stroke-dashoffset 0.9s linear'}}/></svg>
+          <div className="ad-timer-num">{timeLeft}</div>
+        </div>
+        <button className={`ad-skip ${canSkip?'active':''}`} onClick={()=>canSkip&&onDone()} disabled={!canSkip}>
+          {canSkip?'▶ DOORGAAN NAAR APP':`Wacht ${timeLeft} seconden...`}
+        </button>
+      </div>
+    );
+  }
+
+  // ── MAIN APP ──────────────────────────────────────────────────────────────
+  function App() {
+    const [screen, setScreen] = useState("splash");
+    const [tab, setTab] = useState("calc");
+    const [myTerr, setMyTerr] = useState(12);
+    const [myCaps, setMyCaps] = useState(0);
+    const [totalCaps, setTotalCaps] = useState(4);
+    const [capsMode, setCapsMode] = useState(true);
+    const [flash, setFlash] = useState("");
+    const [locked, setLocked] = useState(false);
+
+    // Map selection
+    const [activeMap, setActiveMap] = useState("world");
+    const mapDef = MAPS[activeMap];
+
+    // Player color for strategy map
+    const [playerColor, setPlayerColor] = useState("#4caf50");
+
+    const applyFlash = (t) => { setFlash(t); setTimeout(()=>setFlash(""),600); };
+    const gainTerr = () => { setMyTerr(t=>t+1); applyFlash("w"); };
+    const loseTerr = () => { setMyTerr(t=>Math.max(1,t-1)); applyFlash("l"); };
+    const gainCap = () => { setMyCaps(c=>Math.min(c+1,totalCaps)); applyFlash("w"); };
+    const loseCap = () => { setMyCaps(c=>Math.max(0,c-1)); applyFlash("l"); };
+    const hasWon = capsMode && myCaps>=totalCaps && totalCaps>0;
+
+    // Continents — derived from active map
+    const [contsWorld, setContsWorld] = useState(MAPS.world.continents.map(c=>({...c})));
+    const [contsEurope, setContsEurope] = useState(MAPS.europe.continents.map(c=>({...c})));
+    const conts = activeMap==="world" ? contsWorld : contsEurope;
+    const setConts = activeMap==="world" ? setContsWorld : setContsEurope;
+
+    const [newCont, setNewCont] = useState({name:"",bonus:""});
+    const [ownedConts, setOwnedConts] = useState([]);
+
+    // When map changes, reset owned continents
+    const switchMap = (key) => {
+      setActiveMap(key);
+      setOwnedConts([]);
+    };
+
+    const toggleCont = (id) => setOwnedConts(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+    const baseR = Math.max(3, Math.floor(myTerr/3));
+    const contBonus = ownedConts.reduce((s,id)=>s+(conts.find(c=>c.id===id)?.bonus||0),0);
+    const capBonus = capsMode ? myCaps*2 : 0;
+    const totalR = baseR+contBonus+capBonus;
+
+    // Battle state
+    const [atkT,setAtkT]=useState(10);
+    const [defT,setDefT]=useState(5);
+    const [atkDice,setAtkDice]=useState(3);
+    const [defDice,setDefDice]=useState(2);
+    const [isCap,setIsCap]=useState(false);
+    const [simRes,setSimRes]=useState(null);
+    const [liveR,setLiveR]=useState(null);
+    const [bLog,setBLog]=useState([]);
+    const [simN,setSimN]=useState(1000);
+    const [atkRem,setAtkRem]=useState(null);
+    const [defRem,setDefRem]=useState(null);
+    const [rnd,setRnd]=useState(0);
+
+    const effDef=isCap?3:defDice;
+    const battleOver=atkRem!==null&&(atkRem<=1||defRem<=0);
+    const runSim=()=>setSimRes(simulate(Number(atkT),Number(defT),atkDice,effDef,Number(simN)));
+    const startBattle=()=>{setAtkRem(Number(atkT));setDefRem(Number(defT));setRnd(0);setBLog([]);setLiveR(null);setSimRes(null);};
+    const rollRound=()=>{
+      const ca=atkRem!==null?atkRem:Number(atkT),cd=defRem!==null?defRem:Number(defT);
+      const r=doRound(Math.min(atkDice,ca-1),Math.min(effDef,cd));
+      const na=Math.max(0,ca-r.aLoss),nd=Math.max(0,cd-r.dLoss),nr=rnd+1;
+      setLiveR(r);setAtkRem(na);setDefRem(nd);setRnd(nr);
+      setBLog(p=>[...p,{round:nr,ad:r.ad,dd:r.dd,aLoss:r.aLoss,dLoss:r.dLoss,atkAfter:na,defAfter:nd,cap:isCap}]);
+    };
+    const autoFinish=()=>{
+      let ca=atkRem!==null?atkRem:Number(atkT),cd=defRem!==null?defRem:Number(defT),cr=rnd;
+      const entries=[];
+      while(ca>1&&cd>0){const r=doRound(Math.min(atkDice,ca-1),Math.min(effDef,cd));ca=Math.max(0,ca-r.aLoss);cd=Math.max(0,cd-r.dLoss);cr++;entries.push({round:cr,ad:r.ad,dd:r.dd,aLoss:r.aLoss,dLoss:r.dLoss,atkAfter:ca,defAfter:cd,cap:isCap});}
+      setBLog(p=>[...p,...entries]);setAtkRem(ca);setDefRem(cd);setRnd(cr);
+      if(entries.length>0){const l=entries[entries.length-1];setLiveR({ad:l.ad,dd:l.dd,aLoss:l.aLoss,dLoss:l.dLoss});}
+    };
+    const battleWon=()=>{gainTerr();setTab("calc");};
+    const battleLost=()=>{loseTerr();setTab("calc");};
+    const addCont=()=>{
+      if(!newCont.name)return;
+      setConts(p=>[...p,{id:'c'+Date.now(),name:newCont.name,bonus:Number(newCont.bonus)||0,cx:350,cy:200,path:""}]);
+      setNewCont({name:"",bonus:""});
+    };
+    const delCont=(id)=>{setConts(p=>p.filter(c=>c.id!==id));setOwnedConts(p=>p.filter(x=>x!==id));};
+    const handleBuy=()=>{localStorage.setItem('warboard_pro','1');setScreen("app");};
+
+    if(screen==="splash") return <SplashScreen onStart={()=>setScreen("ad")} onBuy={handleBuy}/>;
+    if(screen==="ad") return <AdScreen onDone={()=>setScreen("app")}/>;
+
+    return (
+      <div className={`app ${flash==='w'?'fw':flash==='l'?'fl':''}`}>
+        <div className="scanlines"/>
+
+        {/* LOCK SCREEN */}
+        {locked && (
+          <div onClick={()=>setLocked(false)} style={{position:'absolute',inset:0,zIndex:800,background:'rgba(13,15,10,0.97)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,cursor:'pointer'}}>
+            <div style={{fontSize:64}}>🔒</div>
+            <div style={{fontFamily:'var(--fh)',fontSize:24,fontWeight:700,color:'var(--muted)',letterSpacing:4}}>VERGRENDELD</div>
+            <div style={{fontSize:12,color:'var(--muted)',letterSpacing:2}}>TIK ERGENS OM TE ONTGRENDELEN</div>
+            <div style={{marginTop:16,display:'flex',gap:24,fontSize:13,color:'var(--muted)',fontFamily:'var(--fh)',flexWrap:'wrap',justifyContent:'center'}}>
+              <span>🎖 {myTerr} gebieden</span>
+              {capsMode&&<span style={{color:'var(--capital)'}}>👑 {myCaps}/{totalCaps} capitals</span>}
+              <span style={{color:'var(--accent)'}}>+{totalR} troepen/beurt</span>
             </div>
           </div>
-          <div className="card">
-            <div className="ctitle">Statistieken</div>
-            <div className="igrid">
-              <div className="icell"><div className="ival">{conts.length}</div><div className="ilbl">CONTINENTEN</div></div>
-              <div className="icell"><div className="ival">{myTerr}</div><div className="ilbl">JOUW GEBIEDEN</div></div>
-              <div className="icell"><div className="ival">{conts.reduce((s,c)=>s+c.bonus,0)}</div><div className="ilbl">MAX BONUS</div></div>
-              <div className="icell"><div className="ival">{totalR}</div><div className="ilbl">TROEPEN/BEURT</div></div>
+        )}
+
+        {/* WIN SCREEN */}
+        {hasWon && (
+          <div style={{position:'absolute',inset:0,zIndex:600,background:'rgba(13,15,10,0.96)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20}}>
+            <div style={{fontSize:80}}>👑</div>
+            <div style={{fontFamily:'var(--fh)',fontSize:36,fontWeight:700,color:'var(--accent)',letterSpacing:4,textAlign:'center'}}>OVERWINNING!</div>
+            <div style={{fontSize:14,color:'var(--muted)',letterSpacing:2}}>Alle {totalCaps} capitals veroverd</div>
+            <button className="btn" style={{width:'auto',padding:'14px 40px',marginTop:10,fontSize:15}} onClick={()=>{setMyCaps(0);setMyTerr(12);}}>↺ NIEUW SPEL</button>
+          </div>
+        )}
+
+        {/* HEADER */}
+        <div className="header">
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div><div className="htitle">⚔ WarBoard</div><div className="hsub">TACTISCHE ASSISTENT v4.0</div></div>
+            <button onClick={()=>setLocked(true)} style={{background:'transparent',border:'1px solid var(--border)',borderRadius:3,color:'var(--muted)',cursor:'pointer',padding:'6px 10px',fontSize:16,lineHeight:1}}>🔒</button>
+            <button className={`modebtn ${capsMode?'on':''}`} onClick={()=>setCapsMode(m=>!m)}>{capsMode?'👑 CAPITALS AAN':'⚔ NORMAAL RISK'}</button>
+          </div>
+          <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <button className="btn red sm" style={{width:'auto',padding:'6px 12px',fontSize:16}} onClick={loseTerr}>−</button>
+              <div className="hstat"><div className="hval">{myTerr}</div><div className="hlbl">GEBIEDEN</div></div>
+              <button className="btn grn sm" style={{width:'auto',padding:'6px 12px',fontSize:16}} onClick={gainTerr}>+</button>
             </div>
+            {capsMode&&<>
+              <div style={{width:1,height:32,background:'var(--border)'}}/>
+              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <button className="btn sm" style={{width:'auto',padding:'6px 12px',fontSize:16,background:'transparent',border:'1px solid var(--capital)',color:'var(--capital)'}} onClick={loseCap}>−</button>
+                <div className="hstat"><div className="hval" style={{color:'var(--capital)'}}>{myCaps}<span style={{fontSize:12,color:'var(--muted)'}}>/{totalCaps}</span></div><div className="hlbl">👑 CAPITALS</div></div>
+                <button className="btn bcap sm" style={{width:'auto',padding:'6px 12px',fontSize:16}} onClick={gainCap}>+</button>
+              </div>
+            </>}
+            <div style={{width:1,height:32,background:'var(--border)'}}/>
+            <div className="hstat"><div className="hval">{totalR}</div><div className="hlbl">TROEPEN/BEURT</div></div>
           </div>
         </div>
 
-        {/* Strategy map col — only on desktop/tablet */}
-        <div className="strategy-col">
-          <div className="map-card">
-            <div className="ctitle">📡 Strategie Radar</div>
+        {/* NAV */}
+        <div className="nav">
+          {[{id:"calc",label:"🎖 Troepen"},{id:"battle",label:"⚔ Gevecht"},{id:"map",label:"🗺 Kaart"}].map(t=>(
+            <button key={t.id} className={`nb${tab===t.id?" on":""}`} onClick={()=>setTab(t.id)}>{t.label}</button>
+          ))}
+        </div>
 
-            {/* Color picker */}
-            <div style={{marginBottom:8}}>
-              <div style={{fontSize:10,color:'var(--muted)',letterSpacing:1,marginBottom:6}}>JOUW KLEUR</div>
-              <div className="color-row">
-                {PLAYER_COLORS.map(c=>(
-                  <div key={c} className={`color-swatch ${playerColor===c?'sel':''}`} style={{background:c}} onClick={()=>setPlayerColor(c)}/>
+        {/* ── TROEPEN TAB ── */}
+        {tab==="calc" && (
+          <div className="content">
+            <div className="col">
+              <div className="card">
+                <div className="ctitle">Gebieden Teller</div>
+                <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:10}}>
+                  <button className="btn red" style={{width:48,padding:'10px 0',fontSize:20}} onClick={loseTerr}>−</button>
+                  <input type="number" inputMode="numeric" pattern="[0-9]*" min="1" value={myTerr} onChange={e=>setMyTerr(Number(e.target.value)||1)} style={{textAlign:'center',fontSize:28,fontFamily:'var(--fh)',fontWeight:700}}/>
+                  <button className="btn grn" style={{width:48,padding:'10px 0',fontSize:20}} onClick={gainTerr}>+</button>
+                </div>
+                <div className="rbox">
+                  <div className="rnum">{totalR}</div>
+                  <div className="rlbl">VERSTERKINGEN DEZE BEURT</div>
+                  <div className="bdown">Basis: <span>{myTerr} ÷ 3 = {baseR}</span><br/>Continent: <span>+{contBonus}</span>{capsMode&&<> &nbsp;|&nbsp; Capitals: <span style={{color:'var(--capital)'}}>+{capBonus}</span></>}</div>
+                  <div className="prog"><div className="pfill" style={{width:`${Math.min(100,(totalR/45)*100)}%`}}/></div>
+                </div>
+              </div>
+              {capsMode&&(
+                <div className="card cc">
+                  <div className="ctitle">👑 Capitals</div>
+                  <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:12}}>
+                    <button className="btn sm" style={{width:48,padding:'10px 0',fontSize:20,background:'transparent',border:'1px solid var(--capital)',color:'var(--capital)'}} onClick={loseCap}>−</button>
+                    <div style={{flex:1,textAlign:'center'}}>
+                      <div style={{fontFamily:'var(--fh)',fontSize:36,fontWeight:700,color:'var(--capital)',lineHeight:1}}>{myCaps}<span style={{fontSize:20,color:'var(--muted)'}}>/{totalCaps}</span></div>
+                      <div style={{fontSize:10,color:'var(--muted)',letterSpacing:1,marginTop:4}}>VEROVERD</div>
+                    </div>
+                    <button className="btn bcap sm" style={{width:48,padding:'10px 0',fontSize:20}} onClick={gainCap}>+</button>
+                  </div>
+                  <div style={{display:'flex',gap:8,justifyContent:'center',marginBottom:12}}>
+                    {Array.from({length:totalCaps}).map((_,i)=>(
+                      <div key={i} onClick={()=>setMyCaps(i<myCaps?i:i+1)} style={{width:36,height:36,borderRadius:'50%',cursor:'pointer',transition:'all 0.2s',background:i<myCaps?'var(--capital)':'var(--bg)',border:`2px solid ${i<myCaps?'var(--capital)':'var(--border)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{i<myCaps?'👑':''}</div>
+                    ))}
+                  </div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div style={{fontSize:12,color:'var(--muted)'}}>+2 troepen per capital</div>
+                    <div style={{fontFamily:'var(--fh)',fontSize:13,color:'var(--capital)'}}>BONUS: +{capBonus}</div>
+                  </div>
+                  <div className="sdiv"/>
+                  <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                    <div style={{fontSize:11,color:'var(--muted)',whiteSpace:'nowrap'}}>CAPITALS IN SPEL:</div>
+                    <div style={{display:'flex',gap:6}}>
+                      {[2,3,4,5,6].map(n=>(
+                        <div key={n} onClick={()=>{setTotalCaps(n);setMyCaps(c=>Math.min(c,n));}} style={{width:28,height:28,borderRadius:3,cursor:'pointer',background:totalCaps===n?'var(--capital)':'var(--bg)',border:`1px solid ${totalCaps===n?'var(--capital)':'var(--border)'}`,color:totalCaps===n?'white':'var(--muted)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'var(--fh)',fontSize:13,fontWeight:700,transition:'all 0.15s'}}>{n}</div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="col">
+              <div className="card">
+                <div className="ctitle">Continent Bonus</div>
+                {/* Map switcher */}
+                <div className="map-switcher">
+                  <button className={`map-switch-btn ${activeMap==='world'?'active':''}`} onClick={()=>switchMap('world')}>🌍 Wereldkaart</button>
+                  <button className={`map-switch-btn ${activeMap==='europe'?'active':''}`} onClick={()=>switchMap('europe')}>🗺 Europe Advanced</button>
+                </div>
+                {conts.map(c=>(
+                  <button key={c.id} onClick={()=>toggleCont(c.id)} className="contbtn" style={{background:ownedConts.includes(c.id)?`${playerColor}22`:'var(--bg)',border:`1px solid ${ownedConts.includes(c.id)?playerColor:'var(--border)'}`,color:ownedConts.includes(c.id)?playerColor:'var(--muted)'}}>
+                    <span style={{fontSize:14}}>{ownedConts.includes(c.id)?'✓ ':''}{c.name}</span>
+                    <span style={{fontSize:12,opacity:0.8,fontFamily:'var(--fh)',letterSpacing:1}}>+{c.bonus}</span>
+                  </button>
                 ))}
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Continent click buttons synced with owned */}
-            <div style={{fontSize:10,color:'var(--muted)',letterSpacing:1,marginBottom:6}}>KLIK CONTINENT AAN OM TE KLEUREN</div>
-            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}}>
-              {mapDef.continents.map(c=>(
-                <button key={c.id} onClick={()=>toggleCont(c.id)} style={{padding:'5px 10px',background:ownedConts.includes(c.id)?`${playerColor}33`:'var(--bg)',border:`1px solid ${ownedConts.includes(c.id)?playerColor:'var(--border)'}`,borderRadius:3,color:ownedConts.includes(c.id)?playerColor:'var(--muted)',fontFamily:'var(--fh)',fontSize:11,cursor:'pointer',letterSpacing:1,transition:'all 0.15s'}}>
-                  {ownedConts.includes(c.id)?'✓ ':''}{c.name}
-                </button>
-              ))}
+        {/* ── GEVECHT TAB ── */}
+        {tab==="battle" && (
+          <div className="content">
+            <div className="col">
+              <div className={`card ${isCap?'cc':''}`}>
+                <div className="ctitle">{isCap?'👑 Kapitaal Aanval':'Gevecht Instellingen'}</div>
+                <div style={{display:'flex',gap:8,marginBottom:10}}>
+                  <button style={{flex:1,padding:'8px',background:!isCap?'var(--accent)':'transparent',border:`1px solid ${!isCap?'var(--accent)':'var(--border)'}`,color:!isCap?'#0d0f0a':'var(--muted)',borderRadius:3,fontFamily:'var(--fh)',fontSize:12,cursor:'pointer'}} onClick={()=>setIsCap(false)}>NORMAAL</button>
+                  <button style={{flex:1,padding:'8px',background:isCap?'var(--capital)':'transparent',border:`1px solid ${isCap?'var(--capital)':'var(--border)'}`,color:isCap?'white':'var(--muted)',borderRadius:3,fontFamily:'var(--fh)',fontSize:12,cursor:'pointer'}} onClick={()=>setIsCap(true)}>👑 KAPITAAL</button>
+                </div>
+                {isCap&&<div style={{background:'rgba(156,39,176,0.1)',border:'1px solid var(--capital)',borderRadius:3,padding:'8px 12px',marginBottom:10,fontSize:11,color:'var(--capital)'}}>KAPITAAL: Verdediger gooit altijd 3 dobbelstenen</div>}
+                <div className="row">
+                  <div><label>⚔ Aanvaller troepen</label><input type="number" inputMode="numeric" pattern="[0-9]*" min="2" value={atkT} onChange={e=>setAtkT(e.target.value)}/></div>
+                  <div><label>🛡 Verdediger troepen</label><input type="number" inputMode="numeric" pattern="[0-9]*" min="1" value={defT} onChange={e=>setDefT(e.target.value)}/></div>
+                </div>
+                <label style={{marginBottom:6}}>⚔ Aanvaller dobbelstenen</label>
+                <div className="dsel">{[1,2,3].map(n=><div key={n} className={`dopt ${atkDice===n?'da':''}`} onClick={()=>setAtkDice(n)}>{n}</div>)}</div>
+                <label style={{marginBottom:6}}>🛡 Verdediger dobbelstenen {isCap&&<span className="cbadge">👑 VAST: 3</span>}</label>
+                <div className="dsel" style={{opacity:isCap?0.35:1,pointerEvents:isCap?'none':'auto'}}>{[1,2,3].map(n=><div key={n} className={`dopt ${effDef===n?(isCap?'dc':'dd'):''}`} onClick={()=>setDefDice(n)}>{n}</div>)}</div>
+                <label style={{marginTop:10,marginBottom:4}}>Simulaties: {simN}</label>
+                <input type="range" min="100" max="5000" step="100" value={simN} onChange={e=>setSimN(e.target.value)} style={{marginBottom:12}}/>
+                <div className="row" style={{marginBottom:6}}>
+                  <button className="btn" onClick={runSim}>Simuleer</button>
+                  <button className={`btn ${isCap?'bcap':'red'}`} onClick={rollRound} disabled={battleOver}>Gooi Dobbelstenen</button>
+                </div>
+                <button className="btn blue" style={{marginBottom:6}} onClick={autoFinish} disabled={battleOver}>⚡ GEVECHT AFMAKEN</button>
+                <button className="btn ghost" style={{fontSize:11,padding:'8px'}} onClick={startBattle}>↺ NIEUW GEVECHT STARTEN</button>
+              </div>
+              {simRes!==null&&(
+                <div className="card">
+                  <div className="bres">
+                    <div className="side sa"><div className="slbl">AANVALLER</div><div className="spct">{simRes}%</div></div>
+                    <div className="vs">VS</div>
+                    <div className={`side ${isCap?'sc':'sd'}`}><div className="slbl">{isCap?'👑 KAPITAAL':'VERDEDIGER'}</div><div className="spct">{100-simRes}%</div></div>
+                  </div>
+                  <div style={{textAlign:'center',marginTop:8}}><span className={`tag ${simRes>=60?'g':simRes>=40?'o':'r'}`}>{simRes>=60?'✓ AANRADEN':simRes>=40?'⚠ TWIJFELACHTIG':'✗ RISKANT'}</span></div>
+                </div>
+              )}
+            </div>
+            <div className="col">
+              {liveR&&(
+                <div className={`card ${isCap?'cc':''}`}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                    <div className="ctitle" style={{marginBottom:0}}>Ronde {rnd}</div>
+                    <div style={{fontSize:11,color:'var(--muted)',fontFamily:'var(--fh)'}}><span style={{color:'var(--accent2)'}}>{atkRem}⚔</span> <span style={{color:isCap?'var(--capital)':'var(--blue)'}}>{defRem}🛡</span></div>
+                  </div>
+                  <div style={{display:'flex',gap:16,justifyContent:'center',alignItems:'center'}}>
+                    <div style={{textAlign:'center'}}><div style={{fontSize:10,color:'var(--muted)',marginBottom:6}}>AANVALLER</div><div className="drow">{liveR.ad.map((d,i)=><div key={i} className="die da">{d}</div>)}</div></div>
+                    <div style={{fontFamily:'var(--fh)',fontSize:13,color:'var(--muted)'}}>VS</div>
+                    <div style={{textAlign:'center'}}><div style={{fontSize:10,color:isCap?'var(--capital)':'var(--muted)',marginBottom:6}}>{isCap?'👑 KAPITAAL':'VERDEDIGER'}</div><div className="drow">{liveR.dd.map((d,i)=><div key={i} className={`die ${isCap?'dc':'dd'}`}>{d}</div>)}</div></div>
+                  </div>
+                  <div style={{textAlign:'center',marginTop:10,fontSize:13,color:'var(--muted)'}}>Aanvaller verliest <span style={{color:'var(--accent2)',fontWeight:'bold'}}>{liveR.aLoss}</span> &nbsp;|&nbsp; Verdediger verliest <span style={{color:'var(--green)',fontWeight:'bold'}}>{liveR.dLoss}</span></div>
+                </div>
+              )}
+              <div className="card">
+                <div className="ctitle">Gevecht Uitkomst</div>
+                <div style={{fontSize:12,color:'var(--muted)',marginBottom:8,lineHeight:1.6}}>Registreer het resultaat:</div>
+                <div className="outrow">
+                  <button className="btn grn" onClick={battleWon}>✓ Gewonnen<br/><span style={{fontSize:11,fontWeight:400}}>+1 gebied</span></button>
+                  <button className="btn red" onClick={battleLost}>✗ Verloren<br/><span style={{fontSize:11,fontWeight:400}}>−1 gebied</span></button>
+                </div>
+                <div style={{marginTop:10,textAlign:'center',fontSize:13,fontFamily:'var(--fh)',color:'var(--muted)'}}>NU: <span style={{color:'var(--accent)',fontSize:18}}>{myTerr}</span> &nbsp;→&nbsp; <span style={{color:'var(--green)'}}>{myTerr+1}</span> of <span style={{color:'var(--red)'}}>{Math.max(1,myTerr-1)}</span></div>
+              </div>
+              {bLog.length>0&&(
+                <div className="card">
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                    <div className="ctitle" style={{marginBottom:0}}>Gevecht Log</div>
+                    <div style={{fontSize:11,fontFamily:'var(--fh)',display:'flex',gap:10}}><span style={{color:'var(--accent2)'}}>ATK:{atkRem??Number(atkT)}</span><span style={{color:isCap?'var(--capital)':'var(--blue)'}}>DEF:{defRem??Number(defT)}</span></div>
+                  </div>
+                  <div className="olog">
+                    <div className="lhdr"><span>RND · AANVALLER · VERDEDIGER</span><span>VERLIES</span></div>
+                    {bLog.map((e,i)=>(
+                      <div key={i} className="lrnd">
+                        <span className="lrnum">R{e.round}</span>
+                        <div className="ldice">{e.ad.map((d,j)=><div key={j} className="ldie a">{d}</div>)}</div>
+                        <span style={{fontSize:10,color:'var(--muted)'}}>vs</span>
+                        <div className="ldice">{e.dd.map((d,j)=><div key={j} className={`ldie ${e.cap?'c':'d'}`}>{d}</div>)}</div>
+                        <span style={{flex:1}}/>
+                        <span style={{fontSize:10,fontFamily:'var(--fh)'}}>
+                          {e.aLoss>0&&<span style={{color:'var(--accent2)'}}>−{e.aLoss}⚔</span>}
+                          {e.dLoss>0&&<span style={{color:e.cap?'var(--capital)':'var(--blue)'}}>−{e.dLoss}🛡</span>}
+                          {e.aLoss===0&&e.dLoss===0&&<span style={{color:'var(--muted)'}}>—</span>}
+                        </span>
+                        <span style={{fontSize:10,color:'var(--muted)',minWidth:56,textAlign:'right'}}>{e.atkAfter}⚔{e.defAfter}🛡</span>
+                      </div>
+                    ))}
+                    {(()=>{const tA=bLog.reduce((s,e)=>s+e.aLoss,0),tD=bLog.reduce((s,e)=>s+e.dLoss,0),last=bLog[bLog.length-1],over=last.atkAfter<=1||last.defAfter<=0;return(<div className="lsum"><span style={{color:'var(--muted)'}}>{bLog.length} rondes</span><span><span style={{color:'var(--accent2)'}}>ATK −{tA}</span><span style={{color:'var(--muted)'}}> | </span><span style={{color:isCap?'var(--capital)':'var(--blue)'}}>DEF −{tD}</span></span>{over&&<span style={{color:last.defAfter<=0?'var(--green)':'var(--red)',fontWeight:'bold'}}>{last.defAfter<=0?'✓ GEWONNEN':'✗ GESTOPT'}</span>}</div>);})()}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── KAART TAB ── */}
+        {tab==="map" && (
+          <div className="content">
+            {/* Left col — continent beheer */}
+            <div className="col">
+              <div className="card">
+                <div className="ctitle">Continent Beheer</div>
+                {/* Map switcher */}
+                <div className="map-switcher">
+                  <button className={`map-switch-btn ${activeMap==='world'?'active':''}`} onClick={()=>switchMap('world')}>🌍 Wereldkaart</button>
+                  <button className={`map-switch-btn ${activeMap==='europe'?'active':''}`} onClick={()=>switchMap('europe')}>🗺 Europe Advanced</button>
+                </div>
+                {conts.map(c=>(
+                  <div key={c.id} className="crow">
+                    <input type="text" value={c.name} style={{flex:2,fontSize:15}} onChange={e=>setConts(p=>p.map(x=>x.id===c.id?{...x,name:e.target.value}:x))}/>
+                    <input type="number" inputMode="numeric" pattern="[0-9]*" value={c.bonus} style={{flex:1,fontSize:15}} onChange={e=>setConts(p=>p.map(x=>x.id===c.id?{...x,bonus:Number(e.target.value)}:x))}/>
+                    <button className="delbtn" onClick={()=>delCont(c.id)}>✕</button>
+                  </div>
+                ))}
+                <div className="sdiv"/>
+                <div style={{fontSize:11,color:'var(--muted)',marginBottom:8,letterSpacing:1}}>NIEUW CONTINENT</div>
+                <div className="crow">
+                  <input type="text" placeholder="Naam" value={newCont.name} style={{flex:2,fontSize:15}} onChange={e=>setNewCont(p=>({...p,name:e.target.value}))}/>
+                  <input type="number" inputMode="numeric" pattern="[0-9]*" placeholder="Bonus" value={newCont.bonus} style={{flex:1,fontSize:15}} onChange={e=>setNewCont(p=>({...p,bonus:e.target.value}))}/>
+                  <button className="btn sm" style={{width:'auto',padding:'8px 14px',fontSize:18}} onClick={addCont}>+</button>
+                </div>
+              </div>
+              <div className="card">
+                <div className="ctitle">Statistieken</div>
+                <div className="igrid">
+                  <div className="icell"><div className="ival">{conts.length}</div><div className="ilbl">CONTINENTEN</div></div>
+                  <div className="icell"><div className="ival">{myTerr}</div><div className="ilbl">JOUW GEBIEDEN</div></div>
+                  <div className="icell"><div className="ival">{conts.reduce((s,c)=>s+c.bonus,0)}</div><div className="ilbl">MAX BONUS</div></div>
+                  <div className="icell"><div className="ival">{totalR}</div><div className="ilbl">TROEPEN/BEURT</div></div>
+                </div>
+              </div>
             </div>
 
-            {/* Radar map */}
-            <StrategyMap mapKey={activeMap} ownedConts={ownedConts} playerColor={playerColor}/>
+            {/* Strategy map col — only on desktop/tablet */}
+            <div className="strategy-col">
+              <div className="map-card">
+                <div className="ctitle">📡 Strategie Radar</div>
 
-            {/* Reset */}
-            <button className="btn ghost" style={{marginTop:8,fontSize:11,padding:'7px'}} onClick={()=>setOwnedConts([])}>↺ RESET KAART</button>
+                {/* Color picker */}
+                <div style={{marginBottom:8}}>
+                  <div style={{fontSize:10,color:'var(--muted)',letterSpacing:1,marginBottom:6}}>JOUW KLEUR</div>
+                  <div className="color-row">
+                    {PLAYER_COLORS.map(c=>(
+                      <div key={c} className={`color-swatch ${playerColor===c?'sel':''}`} style={{background:c}} onClick={()=>setPlayerColor(c)}/>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Continent click buttons synced with owned */}
+                <div style={{fontSize:10,color:'var(--muted)',letterSpacing:1,marginBottom:6}}>KLIK CONTINENT AAN OM TE KLEUREN</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}}>
+                  {mapDef.continents.map(c=>(
+                    <button key={c.id} onClick={()=>toggleCont(c.id)} style={{padding:'5px 10px',background:ownedConts.includes(c.id)?`${playerColor}33`:'var(--bg)',border:`1px solid ${ownedConts.includes(c.id)?playerColor:'var(--border)'}`,borderRadius:3,color:ownedConts.includes(c.id)?playerColor:'var(--muted)',fontFamily:'var(--fh)',fontSize:11,cursor:'pointer',letterSpacing:1,transition:'all 0.15s'}}>
+                      {ownedConts.includes(c.id)?'✓ ':''}{c.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Radar map */}
+                <StrategyMap mapKey={activeMap} ownedConts={ownedConts} playerColor={playerColor}/>
+
+                {/* Reset */}
+                <button className="btn ghost" style={{marginTop:8,fontSize:11,padding:'7px'}} onClick={()=>setOwnedConts([])}>↺ RESET KAART</button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
-    )}
-  </div>
-);
-```
+    );
+  }
 
-}
-
-ReactDOM.createRoot(document.getElementById(‘root’)).render(<App/>);
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
 </body>
