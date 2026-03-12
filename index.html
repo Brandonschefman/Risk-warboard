@@ -148,23 +148,21 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
     <div class="ss">Tactische Assistent</div>
     <div class="sdv"></div>
     <div class="stag">De slimste hulp bij jouw Risk potje. Bereken troepen, simuleer gevechten en domineer het slagveld.</div>
-    <button class="sbtn sbtn-s" id="startbtn">&#9654; START &mdash; GRATIS</button>
-    <button class="sbtn sbtn-b" id="buybtn">&#128081; BUY NOW &mdash; &euro;1,99</button>
-    <button class="sinf" id="infobtn">i</button>
-    <button class="sres" id="resbtn">Restore Purchase</button>
+    <button class="sbtn sbtn-s" id="startbtn" onclick="startAd()">&#9654; START &mdash; GRATIS</button>
+    <button class="sbtn sbtn-b" id="buybtn" onclick="buyPro()">&#128081; BUY NOW &mdash; &euro;1,99</button>
+    <button class="sinf" id="infobtn" onclick="document.getElementById('infomodal').classList.add('open')">i</button>
+    <button class="sres" id="resbtn" onclick="restorePurchase()">Restore Purchase</button>
     <div class="sver">v4.0 &mdash; WARBOARD ASSISTANT</div>
   </div>
 </div>
 
 <div id="adscreen">
   <div style="font-family:var(--fh);font-size:11px;letter-spacing:3px;color:var(--mut)">ADVERTENTIE</div>
-  <div class="adbox" style="background:transparent;border:none;padding:0">
-    <ins class="adsbygoogle"
-      style="display:block;width:320px;height:200px"
-      data-ad-client="ca-pub-4899438898295416"
-      data-ad-slot="auto"
-      data-ad-format="rectangle"
-      data-full-width-responsive="false"></ins>
+  <div class="adbox" id="adboxwrap">
+    <div id="adplaceholder" style="width:320px;height:200px;background:#0d1a0d;border:1px solid #2e3828;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+      <div style="font-size:28px">&#128226;</div>
+      <div style="font-family:var(--fh);font-size:12px;color:var(--mut);letter-spacing:2px">ADVERTENTIE</div>
+    </div>
   </div>
   <div class="adring">
     <svg width="72" height="72" viewBox="0 0 72 72">
@@ -175,7 +173,7 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
     </svg>
     <div class="adnum" id="adnum">30</div>
   </div>
-  <button id="adskip">Wacht 30 seconden...</button>
+  <button id="adskip" onclick="bootApp()">Wacht 30 seconden...</button>
 </div>
 
 <div class="mbg" id="infomodal">
@@ -553,15 +551,24 @@ function flash(w){var a=document.getElementById('app');a.classList.remove('fw','
 function startAd(){
   try{if(localStorage.getItem('warboard_pro')){bootApp();return;}}catch(e){}
   document.getElementById('splash').style.display='none';
-  var ad=document.getElementById('adscreen');ad.style.display='flex';
-  var t=30,circ=188.5,circle=document.getElementById('adcirc'),num=document.getElementById('adnum'),skip=document.getElementById('adskip');
-  // Push AdSense ad
-  try{(adsbygoogle=window.adsbygoogle||[]).push({});}catch(e){}
+  document.getElementById('adscreen').style.display='flex';
+  var t=30,circ=188.5;
+  var circle=document.getElementById('adcirc');
+  var num=document.getElementById('adnum');
+  var skip=document.getElementById('adskip');
+  skip.classList.remove('go');
+  skip.textContent='Wacht 30 seconden...';
+  num.textContent='30';
+  circle.setAttribute('stroke-dashoffset','0');
   var iv=setInterval(function(){
-    t--;num.textContent=t;
-    circle.setAttribute('stroke-dashoffset',String(circ-(t/30)*circ));
-    if(t<=5){skip.classList.add('go');skip.textContent='Doorgaan naar app';}
-    else skip.textContent='Wacht '+t+' seconden...';
+    t--;
+    if(num)num.textContent=t;
+    if(circle)circle.setAttribute('stroke-dashoffset',String(circ*(1-t/30)));
+    if(t<=5){
+      if(skip){skip.classList.add('go');skip.textContent='▶ DOORGAAN NAAR APP';}
+    } else {
+      if(skip)skip.textContent='Wacht '+t+' seconden...';
+    }
     if(t<=0)clearInterval(iv);
   },1000);
 }
@@ -827,7 +834,7 @@ function renderRadar(){
     var fill=owned?hexAlpha(col,.55):'#1a2a1a';
     var stroke=owned?col:'#2e4a2e';
     var sw=owned?2:1;
-    paths+='<path d="'+d+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'" stroke-linejoin="round" style="cursor:pointer" onclick="togCont(''+c.id+'')" />';
+    paths+='<path d="'+d+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'" stroke-linejoin="round" style="cursor:pointer" onclick="togCont(\\"'+c.id+'\\")" />';
     var lx=c.cx,ly=c.cy;
     var nm=c.name.length>14?c.name.substring(0,13)+'.':c.name;
     paths+='<text x="'+lx+'" y="'+(ly+(owned?-4:0))+'" text-anchor="middle" dominant-baseline="middle" font-family="Oswald,sans-serif" font-size="9" font-weight="bold" fill="'+(owned?'white':'#3a5a3a')+'" style="pointer-events:none;letter-spacing:.5px">'+nm.toUpperCase()+'</text>';
