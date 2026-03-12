@@ -135,6 +135,7 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 .csw.on{border-color:white;transform:scale(1.2)}
 .ctag{padding:5px 10px;background:var(--bg);border:1px solid var(--bor);border-radius:3px;color:var(--mut);font-family:var(--fh);font-size:11px;cursor:pointer;letter-spacing:1px;transition:all .15s;display:inline-block;margin:3px}
   </style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4899438898295416" crossorigin="anonymous"></script>
 </head>
 <body>
 <div id="scanlines"></div>
@@ -157,10 +158,13 @@ input[type=range]{width:100%;accent-color:var(--acc);height:6px}
 
 <div id="adscreen">
   <div style="font-family:var(--fh);font-size:11px;letter-spacing:3px;color:var(--mut)">ADVERTENTIE</div>
-  <div class="adbox">
-    <div style="font-size:32px">&#128226;</div>
-    <div style="font-family:var(--fh);font-size:14px;color:var(--mut);letter-spacing:2px">ADVERTENTIE RUIMTE</div>
-    <div style="font-size:11px;color:var(--mut);opacity:.5;margin-top:4px">Hier komt straks jouw advertentie</div>
+  <div class="adbox" style="background:transparent;border:none;padding:0">
+    <ins class="adsbygoogle"
+      style="display:block;width:320px;height:200px"
+      data-ad-client="ca-pub-4899438898295416"
+      data-ad-slot="auto"
+      data-ad-format="rectangle"
+      data-full-width-responsive="false"></ins>
   </div>
   <div class="adring">
     <svg width="72" height="72" viewBox="0 0 72 72">
@@ -547,9 +551,12 @@ function flash(w){var a=document.getElementById('app');a.classList.remove('fw','
 
 // SPLASH / AD
 function startAd(){
+  try{if(localStorage.getItem('warboard_pro')){bootApp();return;}}catch(e){}
   document.getElementById('splash').style.display='none';
   var ad=document.getElementById('adscreen');ad.style.display='flex';
   var t=30,circ=188.5,circle=document.getElementById('adcirc'),num=document.getElementById('adnum'),skip=document.getElementById('adskip');
+  // Push AdSense ad
+  try{(adsbygoogle=window.adsbygoogle||[]).push({});}catch(e){}
   var iv=setInterval(function(){
     t--;num.textContent=t;
     circle.setAttribute('stroke-dashoffset',String(circ-(t/30)*circ));
@@ -889,10 +896,10 @@ document.getElementById('resetmapbtn').onclick=resetMap;
 
 // BOOT
 playDrum();
-// Always show splash - pro users get instant skip button
 try{if(localStorage.getItem('warboard_pro')){
   document.getElementById('startbtn').textContent='▶ DIRECT STARTEN (PRO)';
   document.getElementById('startbtn').style.background='var(--cap)';
+  document.getElementById('startbtn').style.color='white';
 }}catch(e){}
 </script>
 
