@@ -191,9 +191,18 @@ input[type=range] { width:100%; accent-color:var(--accent); height:6px; }
 <div id="root"></div>
 <script>
   if('serviceWorker' in navigator) {
-    const sw = `const CACHE='warboard-v1';self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/'])))});self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))});`;
-    const blob = new Blob([sw],{type:'application/javascript'});
-    navigator.serviceWorker.register(URL.createObjectURL(blob));
+    try {
+      const sw = "const CACHE='warboard-v1';" +
+        "self.addEventListener('install',function(e){" +
+        "  e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(['/']);}));" +
+        "});" +
+        "self.addEventListener('fetch',function(e){" +
+        "  e.respondWith(caches.match(e.request).then(function(r){return r||fetch(e.request);}));" +
+        "});";
+      const blob = new Blob([sw], {type:'application/javascript'});
+      const url = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(url).catch(function(){});
+    } catch(e) {}
   }
 </script>
 <script type="text/babel">
@@ -276,7 +285,7 @@ const PLAYER_COLORS = [”#4caf50”,”#e53935”,”#3a7bd5”,”#ff9800”,�
 // ── STRATEGY MAP COMPONENT ───────────────────────────────────────────────
 function StrategyMap({ mapKey, ownedConts, playerColor }) {
 const mapDef = MAPS[mapKey];
-const [radarAngle, setRaderAngle] = useState(0);
+const [radarAngle, setRadarAngle] = useState(0);
 const rafRef = useRef(null);
 const startRef = useRef(null);
 
@@ -285,7 +294,7 @@ useEffect(() => {
   const animate = (ts) => {
     if (!startRef.current) startRef.current = ts;
     const elapsed = ts - startRef.current;
-    setRaderAngle((elapsed / 4000) * 360 % 360);
+    setRadarAngle((elapsed / 4000) * 360 % 360);
     rafRef.current = requestAnimationFrame(animate);
   };
   rafRef.current = requestAnimationFrame(animate);
